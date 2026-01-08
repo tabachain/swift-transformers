@@ -13,6 +13,12 @@ public struct DebertaWord {
     public let text: String
     public let range: Range<String.Index>
     public let hasLeadingSpace: Bool
+    
+    public init(text: String, range: Range<String.Index>, hasLeadingSpace: Bool) {
+        self.text = text
+        self.range = range
+        self.hasLeadingSpace = hasLeadingSpace
+    }
 }
 
 /// A pure Swift implementation of the DeBERTa-v2 pre-tokenization logic.
