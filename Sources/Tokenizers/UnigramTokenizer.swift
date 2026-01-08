@@ -6,8 +6,8 @@
 //  Copyright © 2024 Hugging Face. All rights reserved.
 //
 
-import Hub
 import Foundation
+import Hub
 
 public class UnigramTokenizer: PreTrainedTokenizerModel {
     struct SentencePieceToken {
@@ -23,34 +23,39 @@ public class UnigramTokenizer: PreTrainedTokenizerModel {
     public var unknownToken: String? { unknownPiece.token }
     
     let minScore: Float
-    let tokensToIds: [String: Int]
-    
-    let bosToken: String? = " "
-    let bosTokenId: Int?
-    let eosToken: String?
-    let eosTokenId: Int?
-    
+    let tokensToIds: [NSString: Int]
+
+    public let bosToken: String? = " "
+    public let bosTokenId: Int?
+    public let eosToken: String?
+    public let eosTokenId: Int?
+
+    // Hardcoded in Unigram tokenizers
+    let fuseUnknownTokens: Bool = true
+
     private let trie: Trie<Character>
         
-    required init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String : Int]) throws {
+    required public init(tokenizerConfig: Config, tokenizerData: Config, addedTokens: [String : Int]) throws {
         guard let configVocab = tokenizerData.model?.vocab?.value as? [[Any]] else {
             throw TokenizerError.missingVocab
         }
         
         vocab = try configVocab.map { piece in
-            guard let token = piece.first as? String else { throw TokenizerError.malformedVocab }
-            
-            // FIX: Handle Double precision in JSON by casting to Double first, then Float.
-            // Direct cast `as? Float` fails for JSON doubles (e.g. 0.0).
-            if let score = piece.last as? Double {
-                return SentencePieceToken(token: token, score: Float(score))
-            } else if let score = piece.last as? Float {
-                return SentencePieceToken(token: token, score: score)
-            } else if let score = piece.last as? NSNumber {
-                return SentencePieceToken(token: token, score: score.floatValue)
+            guard let token = piece.first as? String,
+                  let scoreValue = piece.last else {
+                throw TokenizerError.malformedVocab
+            }
+
+            let score: Float
+            if let floatScore = scoreValue as? Float {
+                score = floatScore
+            } else if let numberScore = scoreValue as? NSNumber {
+                score = numberScore.floatValue
             } else {
                 throw TokenizerError.malformedVocab
             }
+            
+            return SentencePieceToken(token: token, score: score)
         }
         
         minScore = vocab.reduce(999) { partial, token in
@@ -61,33 +66,25 @@ public class UnigramTokenizer: PreTrainedTokenizerModel {
         self.unknownTokenId = unknownTokenId
         self.unknownPiece = SentencePieceToken(token: vocab[unknownTokenId].token, score: minScore - 10)
         
-        // Fix: Use dictionary uniqueKeysWithValues to prevent crash on duplicate keys, though unlikely in valid vocab
-        tokensToIds = Dictionary(vocab.map { $0.token }.enumerated().map { ($1, $0) }, uniquingKeysWith: { (first, _) in first })
-        
-        if let bos = bosToken {
-             bosTokenId = tokensToIds[bos]
-        } else {
-             bosTokenId = nil
-        }
-        
+        tokensToIds = Dictionary(uniqueKeysWithValues: vocab.map { $0.token as NSString }.enumerated().map { ($1, $0) })
+        bosTokenId = tokensToIds[bosToken! as NSString]      // May be nil
+
         eosToken = tokenizerConfig.eosToken?.stringValue
-        eosTokenId = eosToken == nil ? nil : tokensToIds[eosToken!]
-        
+        eosTokenId = eosToken == nil ? nil : tokensToIds[eosToken! as NSString]
+
         trie = Trie()
         trie.append(contentsOf: vocab.map { $0.token })
-                
-        // TODO: set fuse_unk to true
+    }
+
+    public func convertTokenToId(_ token: String) -> Int? {
+        return tokensToIds[token as NSString] ?? self.unknownTokenId
     }
     
-    func convertTokenToId(_ token: String) -> Int? {
-        return tokensToIds[token] ?? self.unknownTokenId
-    }
-    
-    func convertIdToToken(_ id: Int) -> String? {
+    public func convertIdToToken(_ id: Int) -> String? {
         return vocab[id].token
     }
         
-    func tokenize(text: String) -> [String] {
+    public func tokenize(text: String) -> [String] {
         var lattice = TokenLattice(sentence: text, bosTokenId: bosTokenId ?? 0, eosTokenId: eosTokenId ?? 0)
         
         // Populate nodes
@@ -99,7 +96,7 @@ public class UnigramTokenizer: PreTrainedTokenizerModel {
             
             let beginIndex = sentence.index(sentence.startIndex, offsetBy: beginPos)
             for token in trie.commonPrefixSearchIterator(sentence[beginIndex...]).map({ String($0) }) {
-                guard let tokenId = tokensToIds[token] else { fatalError("Token not in vocab: \(token)") }
+                guard let tokenId = tokensToIds[token as NSString] else { fatalError("Token not in vocab: \(token)") }
                 let tokenScore = vocab[tokenId].score
                 lattice.insert(startOffset: beginPos, length: token.count, score: tokenScore, tokenId: tokenId)
                 if !hasSingleNode && token.count == mblen {
