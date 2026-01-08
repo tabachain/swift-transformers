@@ -160,6 +160,7 @@ enum TokenizerModel {
         "CodeGenTokenizer": BPETokenizer.self,
         "CodeLlamaTokenizer": BPETokenizer.self,
         "CohereTokenizer": BPETokenizer.self,
+        "DebertaV2Tokenizer": DebertaV2Tokenizer.self,
         "DistilbertTokenizer": BertTokenizer.self,
         "DistilBertTokenizer": BertTokenizer.self,
         "FalconTokenizer": BPETokenizer.self,
