@@ -88,7 +88,6 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
     }
         
     func tokenize(text: String) -> [String] {
-        print("[DEBUG] Unigram input: '\(text)'") 
         var lattice = TokenLattice(sentence: text, bosTokenId: bosTokenId ?? 0, eosTokenId: eosTokenId ?? 0)
         
         // Populate nodes
@@ -101,6 +100,9 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
             let beginIndex = sentence.index(sentence.startIndex, offsetBy: beginPos)
             for token in trie.commonPrefixSearchIterator(sentence[beginIndex...]).map({ String($0) }) {
                 guard let tokenId = tokensToIds[token] else { fatalError("Token not in vocab: \(token)") }
+                if tokenId == 507 {
+                    print("[DEBUG] Unigram Found Metaspace (507) at index \(beginPos). Matched token: '\(token)'")
+                }
                 let tokenScore = vocab[tokenId].score
                 lattice.insert(startOffset: beginPos, length: token.count, score: tokenScore, tokenId: tokenId)
                 if !hasSingleNode && token.count == mblen {
