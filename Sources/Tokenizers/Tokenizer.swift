@@ -270,5 +270,3 @@ class GemmaTokenizer    : BPETokenizer {}
 class CodeLlamaTokenizer: BPETokenizer {}
 
 class T5Tokenizer       : UnigramTokenizer {}
-class DebertaV2Tokenizer: UnigramTokenizer {}
-

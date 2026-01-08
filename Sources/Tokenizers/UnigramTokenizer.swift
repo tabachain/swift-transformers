@@ -7,6 +7,7 @@
 //
 
 import Hub
+import Foundation
 
 class UnigramTokenizer: PreTrainedTokenizerModel {
     struct SentencePieceToken {
@@ -38,8 +39,18 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
         
         vocab = try configVocab.map { piece in
             guard let token = piece.first as? String else { throw TokenizerError.malformedVocab }
-            guard let score = piece.last as? Float else { throw TokenizerError.malformedVocab }
-            return SentencePieceToken(token: token, score: score)
+            
+            // FIX: Handle Double precision in JSON by casting to Double first, then Float.
+            // Direct cast `as? Float` fails for JSON doubles (e.g. 0.0).
+            if let score = piece.last as? Double {
+                return SentencePieceToken(token: token, score: Float(score))
+            } else if let score = piece.last as? Float {
+                return SentencePieceToken(token: token, score: score)
+            } else if let score = piece.last as? NSNumber {
+                return SentencePieceToken(token: token, score: score.floatValue)
+            } else {
+                throw TokenizerError.malformedVocab
+            }
         }
         
         minScore = vocab.reduce(999) { partial, token in
@@ -50,8 +61,14 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
         self.unknownTokenId = unknownTokenId
         self.unknownPiece = SentencePieceToken(token: vocab[unknownTokenId].token, score: minScore - 10)
         
-        tokensToIds = Dictionary(uniqueKeysWithValues: vocab.map { $0.token }.enumerated().map { ($1, $0) })
-        bosTokenId = tokensToIds[bosToken!]      // May be nil
+        // Fix: Use dictionary uniqueKeysWithValues to prevent crash on duplicate keys, though unlikely in valid vocab
+        tokensToIds = Dictionary(vocab.map { $0.token }.enumerated().map { ($1, $0) }, uniquingKeysWith: { (first, _) in first })
+        
+        if let bos = bosToken {
+             bosTokenId = tokensToIds[bos]
+        } else {
+             bosTokenId = nil
+        }
         
         eosToken = tokenizerConfig.eosToken?.stringValue
         eosTokenId = eosToken == nil ? nil : tokensToIds[eosToken!]
