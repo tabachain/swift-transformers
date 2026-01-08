@@ -1,21 +1,28 @@
+//
+//  DebertaV2Tokenizer.swift
+//
+//
+//
+//
+
 import Foundation
 import Hub
 
 /// A helper struct representing a pre-tokenized word
-struct DebertaWord {
-    let text: String
-    let range: Range<String.Index>
-    let hasLeadingSpace: Bool
+public struct DebertaWord {
+    public let text: String
+    public let range: Range<String.Index>
+    public let hasLeadingSpace: Bool
 }
 
 /// A pure Swift implementation of the DeBERTa-v2 pre-tokenization logic.
 /// Only implements the splitting logic required for GLiNER's input generation.
-class DebertaV2Tokenizer: UnigramTokenizer {
+public class DebertaV2Tokenizer: UnigramTokenizer {
     
     /// Splits text into words considering punctuation and whitespace, mimicking DeBERTa-v2 behavior.
     /// - Parameter text: The input text
     /// - Returns: An array of `DebertaWord`
-    func tokenizeToWords(_ text: String) -> [DebertaWord] {
+    public func tokenizeToWords(_ text: String) -> [DebertaWord] {
         var words: [DebertaWord] = []
         var currentToken = ""
         var currentTokenStartIndex = text.startIndex
@@ -43,29 +50,17 @@ class DebertaV2Tokenizer: UnigramTokenizer {
                     let range = currentTokenStartIndex..<endStrIndex
                     
                     let hasLeadingSpace = (currentTokenStartIndex > lastTokenEndIndex)
-                    words.append(DebertaWord(text: currentToken, range: range, hasLeadingSpace: hasLeadingSpace))
+                    let isFirst = (words.isEmpty)
+                    let shouldPrepend = hasLeadingSpace || isFirst
+                    let prefix = shouldPrepend ? "\u{2581}" : ""
+                    
+                    words.append(DebertaWord(text: prefix + currentToken, range: range, hasLeadingSpace: hasLeadingSpace))
                     
                     currentToken = ""
                     lastTokenEndIndex = endStrIndex
                 }
                 
-                // Advance past whitespace, updating lastTokenEndIndex
-                // The whitespace itself is skipped, but serves as a gap
-                // We need to advance index
-                // Since this scalar is whitespace, we just discard it.
-                // But we must update lastTokenEndIndex to *this* scalar's end so future checks see the gap?
-                // Actually, if we skip it, the next token's start will be > lastTokenEndIndex.
-                // Let's ensure lastTokenEndIndex tracks the end of *processed meaningful content*.
-                // So we do NOT update lastTokenEndIndex here. We leave it at the end of the previous token.
-                // The next token will start at `index + len`.
-                // Wait. 
-                // "Hello world"
-                // Hello ends at 5. lastTokenEndIndex = 5.
-                // space at 5.
-                // world starts at 6.
-                // 6 > 5 -> hasLeadingSpace = true.
-                // Correct.
-                
+                // Advance past whitespace
             } else if CharacterSet.alphanumerics.contains(scalar) {
                 if currentToken.isEmpty {
                     currentTokenStartIndex = scalarStartStrIndex
@@ -79,7 +74,11 @@ class DebertaV2Tokenizer: UnigramTokenizer {
                     let endStrIndex = scalarStartStrIndex
                     let range = currentTokenStartIndex..<endStrIndex
                     let hasLeadingSpace = (currentTokenStartIndex > lastTokenEndIndex)
-                    words.append(DebertaWord(text: currentToken, range: range, hasLeadingSpace: hasLeadingSpace))
+                    let isFirst = (words.isEmpty)
+                    let shouldPrepend = hasLeadingSpace || isFirst
+                    let prefix = shouldPrepend ? "\u{2581}" : ""
+                    
+                    words.append(DebertaWord(text: prefix + currentToken, range: range, hasLeadingSpace: hasLeadingSpace))
                     
                     currentToken = ""
                     lastTokenEndIndex = endStrIndex
@@ -90,8 +89,11 @@ class DebertaV2Tokenizer: UnigramTokenizer {
                 let punctEndIndex = text.index(after: scalarStartStrIndex)
                 let range = scalarStartStrIndex..<punctEndIndex
                 let hasLeadingSpace = (scalarStartStrIndex > lastTokenEndIndex)
+                let isFirst = (words.isEmpty)
+                let shouldPrepend = hasLeadingSpace || isFirst
+                let prefix = shouldPrepend ? "\u{2581}" : ""
                 
-                words.append(DebertaWord(text: punctStr, range: range, hasLeadingSpace: hasLeadingSpace))
+                words.append(DebertaWord(text: prefix + punctStr, range: range, hasLeadingSpace: hasLeadingSpace))
                 
                 lastTokenEndIndex = punctEndIndex
             }
@@ -105,7 +107,11 @@ class DebertaV2Tokenizer: UnigramTokenizer {
             let endStrIndex = text.endIndex
             let range = currentTokenStartIndex..<endStrIndex
             let hasLeadingSpace = (currentTokenStartIndex > lastTokenEndIndex)
-            words.append(DebertaWord(text: currentToken, range: range, hasLeadingSpace: hasLeadingSpace))
+            let isFirst = (words.isEmpty)
+            let shouldPrepend = hasLeadingSpace || isFirst
+            let prefix = shouldPrepend ? "\u{2581}" : ""
+            
+            words.append(DebertaWord(text: prefix + currentToken, range: range, hasLeadingSpace: hasLeadingSpace))
         }
         
         return words
