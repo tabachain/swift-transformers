@@ -62,6 +62,7 @@ struct TokenizerModel {
         "BertTokenizer"      : BertTokenizer.self,
         "CodeGenTokenizer"   : CodeGenTokenizer.self,
         "CodeLlamaTokenizer" : CodeLlamaTokenizer.self,
+        "DebertaV2Tokenizer" : DebertaV2Tokenizer.self,
         "FalconTokenizer"    : FalconTokenizer.self,
         "GemmaTokenizer"     : GemmaTokenizer.self,
         "GPT2Tokenizer"      : GPT2Tokenizer.self,
