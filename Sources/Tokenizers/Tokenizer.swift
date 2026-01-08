@@ -7,7 +7,6 @@
 
 import Hub
 import Foundation
-import Jinja
 
 enum TokenizerError: Error {
     case missingConfig
