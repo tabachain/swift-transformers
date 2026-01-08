@@ -88,6 +88,7 @@ class UnigramTokenizer: PreTrainedTokenizerModel {
     }
         
     func tokenize(text: String) -> [String] {
+        print("[DEBUG] Unigram input: '\(text)'") 
         var lattice = TokenLattice(sentence: text, bosTokenId: bosTokenId ?? 0, eosTokenId: eosTokenId ?? 0)
         
         // Populate nodes
