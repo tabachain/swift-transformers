@@ -8,7 +8,7 @@
 import Foundation
 import Hub
 
-/// A helper struct representing a pre-tokenized word
+/// A helper struct representing a pre-tokenized word 
 public struct DebertaWord {
     public let text: String
     public let range: Range<String.Index>
